@@ -1,8 +1,12 @@
-import { Text, View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet, Alert, Text, FlatList } from "react-native";
 import Title from "../components/ui/Title";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import NumberContainer from "../components/game/NumberContainer";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import Card from "../components/ui/Card";
+import InstructionText from "../components/ui/InstructionText";
+import { Ionicons } from "@expo/vector-icons";
+import GuessLogItem from "../components/game/GuessLogItem";
 
 function generateNumberBetween(min, max, execlude) {
   const guess = Math.floor(Math.random() * (max - min)) + min;
@@ -15,15 +19,21 @@ function generateNumberBetween(min, max, execlude) {
 let minBoundary = 1;
 let maxBoundary = 100;
 
-function GameScreen({ userNumber, onGameOver }) {
+function GameScreen({ userNumber, onGameOver, onNextRound, round }) {
   const initialGuess = generateNumberBetween(1, 100, userNumber);
   const [currentGuess, setCurrentGuess] = useState(initialGuess);
+  const [roundNumbers, setRoundNumbers] = useState([initialGuess]);
 
   useEffect(() => {
     if (currentGuess === userNumber) {
       onGameOver();
     }
-  }, [currentGuess, userNumber]);
+  }, [currentGuess, userNumber, onGameOver]);
+
+  useEffect(() => {
+    minBoundary = 1;
+    maxBoundary = 100;
+  }, []);
 
   function nextGuessHandler(direction) {
     if (
@@ -45,31 +55,63 @@ function GameScreen({ userNumber, onGameOver }) {
       minBoundary = currentGuess + 1;
     }
 
-    const newRandNumber = useMemo(
-      generateNumberBetween(minBoundary, maxBoundary, currentGuess),
+    const newRandNumber = generateNumberBetween(
       minBoundary,
       maxBoundary,
-      userNumber
+      currentGuess
     );
+
     setCurrentGuess(newRandNumber);
+    setRoundNumbers((prevRounds) => [newRandNumber, ...prevRounds]);
+    onNextRound();
   }
+
+  const guessRoundListLength = roundNumbers.length;
 
   return (
     <View style={styles.screen}>
       <Title>Opponent's Guess</Title>
       <NumberContainer>{currentGuess}</NumberContainer>
-      <View>
-        <Text>Higher or Lower?</Text>
+      <Card>
+        <InstructionText style={styles.InstructionText}>
+          Higher or Lower?
+        </InstructionText>
+        <View style={styles.buttonsContainer}>
+          <View style={styles.buttonContainer}>
+            <PrimaryButton onPress={nextGuessHandler.bind(this, "lower")}>
+              <Ionicons
+                name="md-remove"
+                size={24}
+                color="white"
+              />
+            </PrimaryButton>
+          </View>
+          <View style={styles.buttonContainer}>
+            <PrimaryButton onPress={nextGuessHandler.bind(this, "higher")}>
+              <Ionicons
+                name="md-add"
+                size={24}
+                color="white"
+              />
+            </PrimaryButton>
+          </View>
+        </View>
+      </Card>
+      <View style={styles.listContainer}>
+        {/* {roundNumbers.map((num) => (
+          <Text key={num}>{num}</Text>
+        ))} */}
+        <FlatList
+          data={roundNumbers}
+          keyExtractor={(item) => item}
+          renderItem={(itemData) => (
+            <GuessLogItem
+              round={guessRoundListLength - itemData.index}
+              guess={itemData.item}
+            />
+          )}
+        />
       </View>
-      <View style={styles.buttonsContainer}>
-        <PrimaryButton onPress={nextGuessHandler.bind(this, "lower")}>
-          -
-        </PrimaryButton>
-        <PrimaryButton onPress={nextGuessHandler.bind(this, "higher")}>
-          +
-        </PrimaryButton>
-      </View>
-      {/* <Text>Rounds</Text> */}
     </View>
   );
 }
@@ -87,5 +129,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     width: "40%",
   },
-  buttonContainer: "",
+  buttonsContainer: {
+    flexDirection: "row",
+  },
+  buttonContainer: {
+    flex: 1,
+  },
+  InstructionText: {
+    marginBottom: 12,
+  },
+  listContainer: {
+    flex: 1,
+    padding: 16,
+  },
 });
